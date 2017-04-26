@@ -10,5 +10,5 @@ spec:
         - containerPort: 80
       env:
         - name: ETCD_AUTHORITY
-          value: "10.96.0.101:32379"
+          value: "172.17.8.101:2379"
 
