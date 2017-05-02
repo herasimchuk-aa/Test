@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: calico-api-server
+spec:
+  containers:
+    - name: api-server
+      image: calico-api-server:latest
+      ports:
+        - containerPort: 91
+      env:
+        - name: ETCD_AUTHORITY
+          value: "172.18.18.101:2379"
+

@@ -42,7 +42,7 @@ func TestKVPutError(t *testing.T) {
 	clus := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 1, QuotaBackendBytes: quota})
 	defer clus.Terminate(t)
 
-	kv := clus.RandClient()
+	kv := clientv3.NewKV(clus.RandClient())
 	ctx := context.TODO()
 
 	_, err := kv.Put(ctx, "", "bar")
@@ -74,9 +74,10 @@ func TestKVPut(t *testing.T) {
 	clus := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 3})
 	defer clus.Terminate(t)
 
-	lapi := clus.RandClient()
+	lapi := clientv3.NewLease(clus.RandClient())
+	defer lapi.Close()
 
-	kv := clus.RandClient()
+	kv := clientv3.NewKV(clus.RandClient())
 	ctx := context.TODO()
 
 	resp, err := lapi.Grant(context.Background(), 10)
@@ -119,7 +120,7 @@ func TestKVPutWithIgnoreValue(t *testing.T) {
 	clus := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 1})
 	defer clus.Terminate(t)
 
-	kv := clus.RandClient()
+	kv := clientv3.NewKV(clus.RandClient())
 
 	_, err := kv.Put(context.TODO(), "foo", "", clientv3.WithIgnoreValue())
 	if err != rpctypes.ErrKeyNotFound {
@@ -152,9 +153,10 @@ func TestKVPutWithIgnoreLease(t *testing.T) {
 	clus := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 1})
 	defer clus.Terminate(t)
 
-	kv := clus.RandClient()
+	kv := clientv3.NewKV(clus.RandClient())
 
-	lapi := clus.RandClient()
+	lapi := clientv3.NewLease(clus.RandClient())
+	defer lapi.Close()
 
 	resp, err := lapi.Grant(context.Background(), 10)
 	if err != nil {
@@ -201,7 +203,7 @@ func TestKVPutWithRequireLeader(t *testing.T) {
 	)
 	time.Sleep(time.Duration(3*electionTicks) * tickDuration)
 
-	kv := clus.Client(0)
+	kv := clientv3.NewKV(clus.Client(0))
 	_, err := kv.Put(clientv3.WithRequireLeader(context.Background()), "foo", "bar")
 	if err != rpctypes.ErrNoLeader {
 		t.Fatal(err)
@@ -221,7 +223,7 @@ func TestKVRange(t *testing.T) {
 	clus := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 3})
 	defer clus.Terminate(t)
 
-	kv := clus.RandClient()
+	kv := clientv3.NewKV(clus.RandClient())
 	ctx := context.TODO()
 
 	keySet := []string{"a", "b", "c", "c", "c", "foo", "foo/abc", "fop"}
@@ -406,11 +408,12 @@ func TestKVGetErrConnClosed(t *testing.T) {
 	defer clus.Terminate(t)
 
 	cli := clus.Client(0)
+	kv := clientv3.NewKV(cli)
 
 	donec := make(chan struct{})
 	go func() {
 		defer close(donec)
-		_, err := cli.Get(context.TODO(), "foo")
+		_, err := kv.Get(context.TODO(), "foo")
 		if err != nil && err != grpc.ErrClientConnClosing {
 			t.Fatalf("expected %v, got %v", grpc.ErrClientConnClosing, err)
 		}
@@ -442,7 +445,8 @@ func TestKVNewAfterClose(t *testing.T) {
 
 	donec := make(chan struct{})
 	go func() {
-		if _, err := cli.Get(context.TODO(), "foo"); err != grpc.ErrClientConnClosing {
+		kv := clientv3.NewKV(cli)
+		if _, err := kv.Get(context.TODO(), "foo"); err != grpc.ErrClientConnClosing {
 			t.Fatalf("expected %v, got %v", grpc.ErrClientConnClosing, err)
 		}
 		close(donec)
@@ -460,7 +464,7 @@ func TestKVDeleteRange(t *testing.T) {
 	clus := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 3})
 	defer clus.Terminate(t)
 
-	kv := clus.RandClient()
+	kv := clientv3.NewKV(clus.RandClient())
 	ctx := context.TODO()
 
 	tests := []struct {
@@ -532,7 +536,7 @@ func TestKVDelete(t *testing.T) {
 	clus := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 3})
 	defer clus.Terminate(t)
 
-	kv := clus.RandClient()
+	kv := clientv3.NewKV(clus.RandClient())
 	ctx := context.TODO()
 
 	presp, err := kv.Put(ctx, "foo", "")
@@ -564,7 +568,7 @@ func TestKVCompactError(t *testing.T) {
 	clus := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 1})
 	defer clus.Terminate(t)
 
-	kv := clus.RandClient()
+	kv := clientv3.NewKV(clus.RandClient())
 	ctx := context.TODO()
 
 	for i := 0; i < 5; i++ {
@@ -594,7 +598,7 @@ func TestKVCompact(t *testing.T) {
 	clus := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 3})
 	defer clus.Terminate(t)
 
-	kv := clus.RandClient()
+	kv := clientv3.NewKV(clus.RandClient())
 	ctx := context.TODO()
 
 	for i := 0; i < 10; i++ {
@@ -616,7 +620,9 @@ func TestKVCompact(t *testing.T) {
 	// new watcher could precede receiving the compaction without quorum first
 	wcli.Get(ctx, "quorum-get")
 
-	wchan := wcli.Watch(ctx, "foo", clientv3.WithRev(3))
+	wc := clientv3.NewWatcher(wcli)
+	defer wc.Close()
+	wchan := wc.Watch(ctx, "foo", clientv3.WithRev(3))
 
 	if wr := <-wchan; wr.CompactRevision != 7 {
 		t.Fatalf("wchan CompactRevision got %v, want 7", wr.CompactRevision)
@@ -643,7 +649,7 @@ func TestKVGetRetry(t *testing.T) {
 	// could give no other endpoints for client reconnection
 	fIdx := (clus.WaitLeader(t) + 1) % clusterSize
 
-	kv := clus.Client(fIdx)
+	kv := clientv3.NewKV(clus.Client(fIdx))
 	ctx := context.TODO()
 
 	if _, err := kv.Put(ctx, "foo", "bar"); err != nil {
@@ -691,7 +697,7 @@ func TestKVPutFailGetRetry(t *testing.T) {
 	clus := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 3})
 	defer clus.Terminate(t)
 
-	kv := clus.Client(0)
+	kv := clientv3.NewKV(clus.Client(0))
 	clus.Members[0].Stop(t)
 
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
@@ -732,7 +738,7 @@ func TestKVGetCancel(t *testing.T) {
 	defer clus.Terminate(t)
 
 	oldconn := clus.Client(0).ActiveConnection()
-	kv := clus.Client(0)
+	kv := clientv3.NewKV(clus.Client(0))
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	cancel()

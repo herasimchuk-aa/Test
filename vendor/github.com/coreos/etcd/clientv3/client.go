@@ -20,12 +20,12 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
+	prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -36,7 +36,6 @@ import (
 
 var (
 	ErrNoAvailableEndpoints = errors.New("etcdclient: no available endpoints")
-	ErrOldCluster           = errors.New("etcdclient: old cluster version")
 )
 
 // Client provides and manages an etcd v3 client session.
@@ -78,6 +77,15 @@ func New(cfg Config) (*Client, error) {
 // NewFromURL creates a new etcdv3 client from a URL.
 func NewFromURL(url string) (*Client, error) {
 	return New(Config{Endpoints: []string{url}})
+}
+
+// NewFromConfigFile creates a new etcdv3 client from a configuration file.
+func NewFromConfigFile(path string) (*Client, error) {
+	cfg, err := configFromFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return New(*cfg)
 }
 
 // Close shuts down the client's etcd connections.
@@ -274,7 +282,7 @@ func (c *Client) dial(endpoint string, dopts ...grpc.DialOption) (*grpc.ClientCo
 			tokenMu: &sync.RWMutex{},
 		}
 
-		err := c.getToken(c.ctx)
+		err := c.getToken(context.TODO())
 		if err != nil {
 			return nil, err
 		}
@@ -282,7 +290,9 @@ func (c *Client) dial(endpoint string, dopts ...grpc.DialOption) (*grpc.ClientCo
 		opts = append(opts, grpc.WithPerRPCCredentials(c.tokenCred))
 	}
 
-	opts = append(opts, c.cfg.DialOptions...)
+	// add metrics options
+	opts = append(opts, grpc.WithUnaryInterceptor(prometheus.UnaryClientInterceptor))
+	opts = append(opts, grpc.WithStreamInterceptor(prometheus.StreamClientInterceptor))
 
 	conn, err := grpc.Dial(host, opts...)
 	if err != nil {
@@ -309,12 +319,7 @@ func newClient(cfg *Config) (*Client, error) {
 	}
 
 	// use a temporary skeleton client to bootstrap first connection
-	baseCtx := context.TODO()
-	if cfg.Context != nil {
-		baseCtx = cfg.Context
-	}
-
-	ctx, cancel := context.WithCancel(baseCtx)
+	ctx, cancel := context.WithCancel(context.TODO())
 	client := &Client{
 		conn:   nil,
 		cfg:    *cfg,
@@ -360,55 +365,8 @@ func newClient(cfg *Config) (*Client, error) {
 	client.Auth = NewAuth(client)
 	client.Maintenance = NewMaintenance(client)
 
-	if cfg.RejectOldCluster {
-		if err := client.checkVersion(); err != nil {
-			client.Close()
-			return nil, err
-		}
-	}
-
 	go client.autoSync()
 	return client, nil
-}
-
-func (c *Client) checkVersion() (err error) {
-	var wg sync.WaitGroup
-	errc := make(chan error, len(c.cfg.Endpoints))
-	ctx, cancel := context.WithCancel(c.ctx)
-	if c.cfg.DialTimeout > 0 {
-		ctx, _ = context.WithTimeout(ctx, c.cfg.DialTimeout)
-	}
-	wg.Add(len(c.cfg.Endpoints))
-	for _, ep := range c.cfg.Endpoints {
-		// if cluster is current, any endpoint gives a recent version
-		go func(e string) {
-			defer wg.Done()
-			resp, rerr := c.Status(ctx, e)
-			if rerr != nil {
-				errc <- rerr
-				return
-			}
-			vs := strings.Split(resp.Version, ".")
-			maj, min := 0, 0
-			if len(vs) >= 2 {
-				maj, rerr = strconv.Atoi(vs[0])
-				min, rerr = strconv.Atoi(vs[1])
-			}
-			if maj < 3 || (maj == 3 && min < 2) {
-				rerr = ErrOldCluster
-			}
-			errc <- rerr
-		}(ep)
-	}
-	// wait for success
-	for i := 0; i < len(c.cfg.Endpoints); i++ {
-		if err = <-errc; err == nil {
-			break
-		}
-	}
-	cancel()
-	wg.Wait()
-	return err
 }
 
 // ActiveConnection returns the current in-use connection

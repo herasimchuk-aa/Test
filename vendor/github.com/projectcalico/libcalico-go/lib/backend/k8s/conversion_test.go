@@ -25,6 +25,9 @@ import (
 	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 	metav1 "k8s.io/client-go/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/util/intstr"
+
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s/resources"
+	"github.com/projectcalico/libcalico-go/lib/net"
 )
 
 var _ = Describe("Test parsing strings", func() {
@@ -126,7 +129,7 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(wep.Revision.(string)).To(Equal("1234"))
 	})
 
-	It("should not parse a Pod without an IP to a WorkloadEndpoint", func() {
+	It("should fail to parse a Pod without an IP to a WorkloadEndpoint", func() {
 		pod := k8sapi.Pod{
 			ObjectMeta: k8sapi.ObjectMeta{
 				Name:      "podA",
@@ -146,7 +149,7 @@ var _ = Describe("Test Pod conversion", func() {
 		}
 
 		_, err := c.podToWorkloadEndpoint(&pod)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("should parse a Pod with no labels", func() {
@@ -179,7 +182,7 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(wep.Value.(*model.WorkloadEndpoint).Labels).To(Equal(map[string]string{"calico/k8s_ns": "default"}))
 	})
 
-	It("should Parse a Pod with no NodeName", func() {
+	It("should not Parse a Pod with no NodeName", func() {
 		pod := k8sapi.Pod{
 			ObjectMeta: k8sapi.ObjectMeta{
 				Name:      "podA",
@@ -192,7 +195,7 @@ var _ = Describe("Test Pod conversion", func() {
 		}
 
 		_, err := c.podToWorkloadEndpoint(&pod)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(HaveOccurred())
 	})
 
 })

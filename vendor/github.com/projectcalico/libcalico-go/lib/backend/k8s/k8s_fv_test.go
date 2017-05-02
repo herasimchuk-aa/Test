@@ -23,16 +23,13 @@ import (
 	. "github.com/onsi/gomega"
 
 	log "github.com/Sirupsen/logrus"
-
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
-
 	k8sapi "k8s.io/client-go/pkg/api/v1"
 	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 	metav1 "k8s.io/client-go/pkg/apis/meta/v1"
-	"k8s.io/client-go/pkg/util/wait"
 )
 
 // cb implements the callback interface required for the
@@ -107,60 +104,17 @@ func (c cb) ProcessUpdates() {
 	}
 }
 
-func (c cb) ExpectExists(kvps []model.KVPair) {
-	// For each Key, wait for it to exist.
+func (c cb) ExpectUpdate(kvps []model.KVPair) {
 	for _, kvp := range kvps {
 		log.Infof("[TEST] Expecting key: %s", kvp.Key)
-		exists := false
 
-		wait.PollImmediate(1*time.Second, 60*time.Second, func() (bool, error) {
-			// Get the update.
-			c.Lock.Lock()
-			update, ok := c.State[kvp.Key.String()]
-			exists = ok
-			c.Lock.Unlock()
+		// Get the update.
+		c.Lock.Lock()
+		update, ok := c.State[kvp.Key.String()]
+		c.Lock.Unlock()
 
-			log.Infof("[TEST] Key exists? %t: %+v", ok, update)
-			if ok {
-				// Expected key to exist, and it does.
-				return true, nil
-			} else {
-				// Key does not yet exist.
-				return false, nil
-			}
-		})
-
-		// Expect the key to have existed.
-		Expect(exists).To(Equal(true), fmt.Sprintf("Expected key to exist: %s", kvp.Key))
-	}
-}
-
-// ExpectDeleted asserts that the provided KVPairs have been deleted
-// via an update over the Syncer.
-func (c cb) ExpectDeleted(kvps []model.KVPair) {
-	for _, kvp := range kvps {
-		log.Infof("[TEST] Not expecting key: %s", kvp.Key)
-		exists := true
-
-		wait.PollImmediate(1*time.Second, 60*time.Second, func() (bool, error) {
-			// Get the update.
-			c.Lock.Lock()
-			update, ok := c.State[kvp.Key.String()]
-			exists = ok
-			c.Lock.Unlock()
-
-			log.Infof("[TEST] Key exists? %t: %+v", ok, update)
-			if ok {
-				// Expected key to not exist, and it does.
-				return false, nil
-			} else {
-				// Expected key to not exist, and it doesn't.
-				return true, nil
-			}
-		})
-
-		// Expect the key to not exist.
-		Expect(exists).To(Equal(false), fmt.Sprintf("Expected key not to exist: %s", kvp.Key))
+		log.Infof("[TEST] Key exists? %t: %+v", ok, update)
+		Expect(ok).To(Equal(true), fmt.Sprintf("Expected key to exist: %s", kvp.Key))
 	}
 }
 
@@ -244,7 +198,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 			{Key: model.ProfileLabelsKey{model.ProfileKey{Name: expectedName}}},
 		}
 		time.Sleep(1 * time.Second)
-		cb.ExpectExists(expectedKeys)
+		cb.ExpectUpdate(expectedKeys)
 	})
 
 	It("should handle a Namespace without DefaultDeny", func() {
@@ -397,17 +351,17 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		}
 		_, err := c.clientSet.Pods("default").Create(&pod)
 
-		// Make sure we clean up after ourselves.  This might fail if we reach the
-		// test below which deletes this pod, but that's OK.
+		// Make sure we clean up after ourselves.
 		defer func() {
 			log.Warnf("[TEST] Cleaning up test pod: %s", pod.ObjectMeta.Name)
-			_ = c.clientSet.Pods("default").Delete(pod.ObjectMeta.Name, &k8sapi.DeleteOptions{})
+			err = c.clientSet.Pods("default").Delete(pod.ObjectMeta.Name, &k8sapi.DeleteOptions{})
+			Expect(err).NotTo(HaveOccurred())
 		}()
-		By("Creating a pod", func() {
+		By("creating a pod", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		By("Waiting for the pod to start", func() {
+		By("waiting for the pod to start", func() {
 			// Wait up to 120s for pod to start running.
 			log.Warnf("[TEST] Waiting for pod %s to start", pod.ObjectMeta.Name)
 			for i := 0; i < 120; i++ {
@@ -424,14 +378,14 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 			Expect(p.Status.Phase).To(Equal(k8sapi.PodRunning))
 		})
 
-		By("Performing a List() operation", func() {
+		By("performing a List() operation", func() {
 			// Perform List and ensure it shows up in the Calico API.
 			weps, err := c.List(model.WorkloadEndpointListOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(weps)).To(BeNumerically(">", 0))
 		})
 
-		By("Performing a List(workloadID=pod) operation", func() {
+		By("performing a List(workloadID=pod) operation", func() {
 			// Perform List, including a workloadID
 			weps, err := c.List(model.WorkloadEndpointListOptions{
 				WorkloadID: fmt.Sprintf("default.%s", pod.ObjectMeta.Name),
@@ -440,7 +394,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 			Expect(len(weps)).To(Equal(1))
 		})
 
-		By("Performing a Get() operation", func() {
+		By("performing a Get() operation", func() {
 			// Perform a Get and ensure no error in the Calico API.
 			wep, err := c.Get(model.WorkloadEndpointKey{WorkloadID: fmt.Sprintf("default.%s", pod.ObjectMeta.Name)})
 			Expect(err).NotTo(HaveOccurred())
@@ -460,7 +414,8 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 
 		By("Expecting an update on the Syncer API", func() {
 			// Expect corresponding updates over the syncer for this Pod.
-			cb.ExpectExists(expectedKeys)
+			time.Sleep(1 * time.Second)
+			cb.ExpectUpdate(expectedKeys)
 		})
 
 		By("Expecting a Syncer snapshot to include the update", func() {
@@ -469,15 +424,11 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 			go snapshotCallbacks.ProcessUpdates()
 			snapshotSyncer.Start()
 
-			// Expect the snapshot to include the right keys.
-			snapshotCallbacks.ExpectExists(expectedKeys)
+			// Wait a bit for the snapshot to finish.
+			time.Sleep(2 * time.Second)
+			snapshotCallbacks.ExpectUpdate(expectedKeys)
 		})
 
-		By("Deleting the Pod and expecting the wep to be deleted", func() {
-			err = c.clientSet.Pods("default").Delete(pod.ObjectMeta.Name, &k8sapi.DeleteOptions{})
-			Expect(err).NotTo(HaveOccurred())
-			cb.ExpectDeleted(expectedKeys)
-		})
 	})
 
 	// Add a defer to wait for all pods to clean up.

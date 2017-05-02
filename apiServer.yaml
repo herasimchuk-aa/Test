@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: calico-apiserver
+spec:
+  containers:
+    - name: api-server
+      image: calico-apiserver:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 80
+      env:
+        - name: ETCD_AUTHORITY
+          value: "10.96.232.136:6666"

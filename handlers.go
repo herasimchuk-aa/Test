@@ -4,7 +4,7 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/projectcalico/libcalico-go/lib/client"
+	"github.com/tigera/libcalico-go-private/lib/client"
 )
 
 // Handlers implements the API handler to work with REST APIs.

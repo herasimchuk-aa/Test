@@ -290,11 +290,8 @@ func startClientListeners(cfg *Config) (sctxs map[string]*serveCtx, err error) {
 			sctx.userHandlers[k] = cfg.UserHandlers[k]
 		}
 		sctx.serviceRegister = cfg.ServiceRegister
-		if cfg.EnablePprof || cfg.Debug {
+		if cfg.EnablePprof {
 			sctx.registerPprof()
-		}
-		if cfg.Debug {
-			sctx.registerTrace()
 		}
 		sctxs[u.Host] = sctx
 	}

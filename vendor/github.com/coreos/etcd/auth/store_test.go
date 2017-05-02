@@ -38,33 +38,6 @@ func dummyIndexWaiter(index uint64) <-chan struct{} {
 	return ch
 }
 
-// TestNewAuthStoreRevision ensures newly auth store
-// keeps the old revision when there are no changes.
-func TestNewAuthStoreRevision(t *testing.T) {
-	b, tPath := backend.NewDefaultTmpBackend()
-	defer os.Remove(tPath)
-
-	as := NewAuthStore(b, dummyIndexWaiter)
-	err := enableAuthAndCreateRoot(as)
-	if err != nil {
-		t.Fatal(err)
-	}
-	old := as.Revision()
-	b.Close()
-	as.Close()
-
-	// no changes to commit
-	b2 := backend.NewDefaultBackend(tPath)
-	as = NewAuthStore(b2, dummyIndexWaiter)
-	new := as.Revision()
-	b2.Close()
-	as.Close()
-
-	if old != new {
-		t.Fatalf("expected revision %d, got %d", old, new)
-	}
-}
-
 func setupAuthStore(t *testing.T) (store *authStore, teardownfunc func(t *testing.T)) {
 	b, tPath := backend.NewDefaultTmpBackend()
 
@@ -472,92 +445,6 @@ func TestAuthInfoFromCtx(t *testing.T) {
 	}
 	if ai.Username != "foo" {
 		t.Errorf("expected %v, got %v", "foo", ai.Username)
-	}
-}
-
-func TestAuthDisable(t *testing.T) {
-	as, tearDown := setupAuthStore(t)
-	defer tearDown(t)
-
-	as.AuthDisable()
-	ctx := context.WithValue(context.WithValue(context.TODO(), "index", uint64(2)), "simpleToken", "dummy")
-	_, err := as.Authenticate(ctx, "foo", "bar")
-	if err != ErrAuthNotEnabled {
-		t.Errorf("expected %v, got %v", ErrAuthNotEnabled, err)
-	}
-
-	// Disabling disabled auth to make sure it can return safely if store is already disabled.
-	as.AuthDisable()
-	_, err = as.Authenticate(ctx, "foo", "bar")
-	if err != ErrAuthNotEnabled {
-		t.Errorf("expected %v, got %v", ErrAuthNotEnabled, err)
-	}
-}
-
-func TestIsAdminPermitted(t *testing.T) {
-	as, tearDown := setupAuthStore(t)
-	defer tearDown(t)
-
-	err := as.IsAdminPermitted(&AuthInfo{Username: "root", Revision: 1})
-	if err != nil {
-		t.Errorf("expected nil, got %v", err)
-	}
-
-	// invalid user
-	err = as.IsAdminPermitted(&AuthInfo{Username: "rooti", Revision: 1})
-	if err != ErrUserNotFound {
-		t.Errorf("expected %v, got %v", ErrUserNotFound, err)
-	}
-
-	// non-admin user
-	err = as.IsAdminPermitted(&AuthInfo{Username: "foo", Revision: 1})
-	if err != ErrPermissionDenied {
-		t.Errorf("expected %v, got %v", ErrPermissionDenied, err)
-	}
-
-	// disabled auth should return nil
-	as.AuthDisable()
-	err = as.IsAdminPermitted(&AuthInfo{Username: "root", Revision: 1})
-	if err != nil {
-		t.Errorf("expected nil, got %v", err)
-	}
-}
-
-func TestRecoverFromSnapshot(t *testing.T) {
-	as, _ := setupAuthStore(t)
-
-	ua := &pb.AuthUserAddRequest{Name: "foo"}
-	_, err := as.UserAdd(ua) // add an existing user
-	if err == nil {
-		t.Fatalf("expected %v, got %v", ErrUserAlreadyExist, err)
-	}
-	if err != ErrUserAlreadyExist {
-		t.Fatalf("expected %v, got %v", ErrUserAlreadyExist, err)
-	}
-
-	ua = &pb.AuthUserAddRequest{Name: ""}
-	_, err = as.UserAdd(ua) // add a user with empty name
-	if err != ErrUserEmpty {
-		t.Fatal(err)
-	}
-
-	as.Close()
-
-	as2 := NewAuthStore(as.be, dummyIndexWaiter)
-	defer func(a *authStore) {
-		a.Close()
-	}(as2)
-
-	if !as2.isAuthEnabled() {
-		t.Fatal("recovering authStore from existing backend failed")
-	}
-
-	ul, err := as.UserList(&pb.AuthUserListRequest{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !contains(ul.Users, "root") {
-		t.Errorf("expected %v in %v", "root", ul.Users)
 	}
 }
 

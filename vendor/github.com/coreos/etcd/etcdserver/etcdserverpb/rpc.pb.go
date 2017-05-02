@@ -232,8 +232,7 @@ type RangeRequest struct {
 	// then the range request gets all keys prefixed with key.
 	// If both key and range_end are '\0', then the range request returns all keys.
 	RangeEnd []byte `protobuf:"bytes,2,opt,name=range_end,json=rangeEnd,proto3" json:"range_end,omitempty"`
-	// limit is a limit on the number of keys returned for the request. When limit is set to 0,
-	// it is treated as no limit.
+	// limit is a limit on the number of keys returned for the request.
 	Limit int64 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
 	// revision is the point-in-time of the key-value store to use for the range.
 	// If revision is less or equal to zero, the range is over the newest key-value store.

@@ -66,7 +66,7 @@ func doRounds(rcs []roundClient, rounds int) {
 	var wg sync.WaitGroup
 
 	wg.Add(len(rcs))
-	finished := make(chan struct{})
+	finished := make(chan struct{}, 0)
 	for i := range rcs {
 		go func(rc *roundClient) {
 			defer wg.Done()

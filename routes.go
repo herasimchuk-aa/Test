@@ -72,6 +72,38 @@ func NewServer() *Server {
 	}
 	s.routes = append(s.routes, listNodes)
 
+	getTier := Route{
+		"GetTier",
+		"GET",
+		"/tier",
+		handlers.listTier,
+	}
+	s.routes = append(s.routes, getTier)
+
+	createTier := Route{
+		"CreateTier",
+		"PUT",
+		"/tier",
+		handlers.createTier,
+	}
+	s.routes = append(s.routes, createTier)
+
+	updateTier := Route{
+		"UpdateTier",
+		"POST",
+		"/tier",
+		handlers.updateTier,
+	}
+	s.routes = append(s.routes, updateTier)
+
+	deleteTier := Route{
+		"DeleteTier",
+		"DELETE",
+		"/tier",
+		handlers.deleteTier,
+	}
+	s.routes = append(s.routes, deleteTier)
+
 	return s
 }
 

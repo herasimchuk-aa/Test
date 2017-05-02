@@ -1,5 +1,5 @@
-hash: f48c7af384ba47b9b35d1bd883ac9b48bbf237e3442ceee0cb525502643ff7fa
-updated: 2017-03-27T10:01:07.707429061-07:00
+hash: 8ec30121d0716d70964773f80225fdfef035649d7c7b7110f7d64c3b99617fff
+updated: 2017-05-01T13:11:12.633710476-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -9,9 +9,10 @@ imports:
 - name: github.com/blang/semver
   version: 31b736133b98f26d5e078ec9eb591666edfd091f
 - name: github.com/coreos/etcd
-  version: 17ae440991da3bdb2df4309936dd2074f66ec394
+  version: d2716fc5ae7909a3b9651e31cfb0eba22b4920c3
   subpackages:
   - client
+  - pkg/fileutil
   - pkg/pathutil
   - pkg/tlsutil
   - pkg/transport
@@ -29,6 +30,12 @@ imports:
   version: 568e959cd89871e61434c1143528d9162da89ef2
   subpackages:
   - semver
+- name: github.com/coreos/go-systemd
+  version: 48702e0da86bd25e76cfef347e2adeb434a0d0a6
+  subpackages:
+  - daemon
+  - journal
+  - util
 - name: github.com/coreos/pkg
   version: 3ac0863d7acf3bc44daf49afef8919af12f704ef
   subpackages:
@@ -87,7 +94,7 @@ imports:
 - name: github.com/juju/ratelimit
   version: 77ed1c8a01217656d2080ad51981f6e99adaa177
 - name: github.com/kelseyhightower/envconfig
-  version: 8bf4bbfc795e2c7c8a5ea47b707453ed019e2ad4
+  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/mailru/easyjson
   version: d5b7844b561a7bc640052f1b935f7b800330d7e0
   subpackages:
@@ -96,10 +103,6 @@ imports:
   - jwriter
 - name: github.com/pborman/uuid
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
-- name: github.com/projectcalico/calicoctl
-  version: 882dd008182bf98363c4f0681858c4194ccec8e6
-  subpackages:
-  - calicoctl/commands/clientmgr
 - name: github.com/projectcalico/go-json
   version: 6219dc7339ba20ee4c57df0a8baac62317d19cb1
   subpackages:
@@ -109,7 +112,8 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: ab2351e017129928b55999b99c67001f49fc2eae
+  version: 8cfc4a44c3e9197862d0ce2be8f16d79a0fe83a8
+  repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/api
   - lib/api/unversioned
@@ -143,6 +147,10 @@ imports:
   version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
 - name: github.com/spf13/pflag
   version: 08b1a584251b5b62f458943640fc8ebd4d50aaa5
+- name: github.com/tigera/libcalico-go-private
+  version: 4c750bea208369b5926ace818cc82b70cb9d0c18
+  subpackages:
+  - lib/client
 - name: github.com/ugorji/go
   version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
   subpackages:
@@ -170,7 +178,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
+  version: d75a52659825e75fff6158388dddc6a5b04f9ba5
   subpackages:
   - unix
 - name: golang.org/x/text

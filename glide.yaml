@@ -1,15 +1,12 @@
-package: github.com/projectcalico/calico-api-server
+package: github.com/tigera/calico-apiserver
 import:
 - package: github.com/Sirupsen/logrus
   version: v0.11.5
 - package: github.com/gorilla/mux
   version: v1.3.0
-- package: github.com/projectcalico/calicoctl
-  version: v1.1.0
-  subpackages:
-  - calicoctl/commands/clientmgr
 - package: github.com/projectcalico/libcalico-go
-  version: v1.1.4
+  repo:    git@github.com:tigera/libcalico-go-private
+  version: 8cfc4a44c3e9197862d0ce2be8f16d79a0fe83a8
   subpackages:
-  - lib/api
-  - lib/api/unversioned
+    - lib/api
+    - lib/client
