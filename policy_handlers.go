@@ -20,6 +20,7 @@ func (h *Handlers) listPolicy(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.Unmarshal(body, &policyMetadata); err != nil {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusUnprocessableEntity) // unprocessable entity
 		if err := json.NewEncoder(w).Encode(err); err != nil {
 			panic(err)
@@ -33,6 +34,7 @@ func (h *Handlers) listPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(policies.Items); err != nil {
 		panic(err)
@@ -50,6 +52,7 @@ func (h *Handlers) createPolicy(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.Unmarshal(body, &policy); err != nil {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusUnprocessableEntity) // unprocessable entity
 		if err := json.NewEncoder(w).Encode(err); err != nil {
 			panic(err)
@@ -64,6 +67,7 @@ func (h *Handlers) createPolicy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(p); err != nil {
 		panic(err)
@@ -81,6 +85,7 @@ func (h *Handlers) updatePolicy(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.Unmarshal(body, &policy); err != nil {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusUnprocessableEntity) // unprocessable entity
 		if err := json.NewEncoder(w).Encode(err); err != nil {
 			panic(err)
@@ -94,6 +99,7 @@ func (h *Handlers) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(p); err != nil {
 		panic(err)
@@ -111,6 +117,7 @@ func (h *Handlers) deletePolicy(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.Unmarshal(body, &policyMetadata); err != nil {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusUnprocessableEntity) // unprocessable entity
 		if err := json.NewEncoder(w).Encode(err); err != nil {
 			panic(err)
@@ -124,5 +131,6 @@ func (h *Handlers) deletePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusNoContent)
 }

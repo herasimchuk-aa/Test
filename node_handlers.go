@@ -20,6 +20,7 @@ func (h *Handlers) listNodes(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.Unmarshal(body, &nodeMetadata); err != nil {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusUnprocessableEntity) // unprocessable entity
 		if err := json.NewEncoder(w).Encode(err); err != nil {
 			panic(err)
@@ -33,6 +34,7 @@ func (h *Handlers) listNodes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(nodes.Items); err != nil {
 		panic(err)

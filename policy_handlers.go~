@@ -9,8 +9,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/api"
 )
 
-func (h *Handlers) listTier(w http.ResponseWriter, r *http.Request) {
-	tierMetadata := api.TierMetadata{}
+func (h *Handlers) listPolicy(w http.ResponseWriter, r *http.Request) {
+	policyMetadata := api.PolicyMetadata{}
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
 		panic(err)
@@ -18,7 +18,7 @@ func (h *Handlers) listTier(w http.ResponseWriter, r *http.Request) {
 	if err := r.Body.Close(); err != nil {
 		panic(err)
 	}
-	if err := json.Unmarshal(body, &tierMetadata); err != nil {
+	if err := json.Unmarshal(body, &policyMetadata); err != nil {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusUnprocessableEntity) // unprocessable entity
@@ -27,8 +27,8 @@ func (h *Handlers) listTier(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	pHandler := h.client.Tiers()
-	tiers, err := pHandler.List(tierMetadata)
+	pHandler := h.client.Policies()
+	policies, err := pHandler.List(policyMetadata)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -36,13 +36,13 @@ func (h *Handlers) listTier(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(tiers.Items); err != nil {
+	if err := json.NewEncoder(w).Encode(policies.Items); err != nil {
 		panic(err)
 	}
 }
 
-func (h *Handlers) createTier(w http.ResponseWriter, r *http.Request) {
-	tier := api.Tier{}
+func (h *Handlers) createPolicy(w http.ResponseWriter, r *http.Request) {
+	policy := api.Policy{}
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
 		panic(err)
@@ -50,7 +50,7 @@ func (h *Handlers) createTier(w http.ResponseWriter, r *http.Request) {
 	if err := r.Body.Close(); err != nil {
 		panic(err)
 	}
-	if err := json.Unmarshal(body, &tier); err != nil {
+	if err := json.Unmarshal(body, &policy); err != nil {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusUnprocessableEntity) // unprocessable entity
@@ -59,23 +59,22 @@ func (h *Handlers) createTier(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	pHandler := h.client.Tiers()
-	p, err := pHandler.Create(&tier)
+	pHandler := h.client.Policies()
+	p, err := pHandler.Create(&policy)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(p); err != nil {
 		panic(err)
 	}
 }
 
-func (h *Handlers) updateTier(w http.ResponseWriter, r *http.Request) {
-	tier := api.Tier{}
+func (h *Handlers) updatePolicy(w http.ResponseWriter, r *http.Request) {
+	policy := api.Policy{}
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
 		panic(err)
@@ -83,31 +82,29 @@ func (h *Handlers) updateTier(w http.ResponseWriter, r *http.Request) {
 	if err := r.Body.Close(); err != nil {
 		panic(err)
 	}
-	if err := json.Unmarshal(body, &tier); err != nil {
+	if err := json.Unmarshal(body, &policy); err != nil {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusUnprocessableEntity) // unprocessable entity
 		if err := json.NewEncoder(w).Encode(err); err != nil {
 			panic(err)
 		}
 	}
 
-	pHandler := h.client.Tiers()
-	p, err := pHandler.Update(&tier)
+	pHandler := h.client.Policies()
+	p, err := pHandler.Update(&policy)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(p); err != nil {
 		panic(err)
 	}
 }
 
-func (h *Handlers) deleteTier(w http.ResponseWriter, r *http.Request) {
-	tierMetadata := api.TierMetadata{}
+func (h *Handlers) deletePolicy(w http.ResponseWriter, r *http.Request) {
+	policyMetadata := api.PolicyMetadata{}
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
 		panic(err)
@@ -115,22 +112,20 @@ func (h *Handlers) deleteTier(w http.ResponseWriter, r *http.Request) {
 	if err := r.Body.Close(); err != nil {
 		panic(err)
 	}
-	if err := json.Unmarshal(body, &tierMetadata); err != nil {
+	if err := json.Unmarshal(body, &policyMetadata); err != nil {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusUnprocessableEntity) // unprocessable entity
 		if err := json.NewEncoder(w).Encode(err); err != nil {
 			panic(err)
 		}
 	}
 
-	pHandler := h.client.Tiers()
-	err = pHandler.Delete(tierMetadata)
+	pHandler := h.client.Policies()
+	err = pHandler.Delete(policyMetadata)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusNoContent)
 }
