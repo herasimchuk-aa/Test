@@ -32,14 +32,6 @@ func NewServer() *Server {
 	}
 	s.routes = append(s.routes, getPolicy)
 
-	getPolicyPost := Route{
-		"GetPolicy",
-		"POST",
-		"/policy",
-		handlers.listPolicy,
-	}
-	s.routes = append(s.routes, getPolicyPost)
-
 	createPolicy := Route{
 		"CreatePolicy",
 		"PUT",
